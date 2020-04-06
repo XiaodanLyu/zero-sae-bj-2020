@@ -1,0 +1,188 @@
+---
+title: "Data analysis of soil erosion data"
+author: "Xiaodan Lyu, Emily Berg and Heike Hofmann"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+```{r load}
+rm(list = ls(all = T))
+library(dplyr)
+library(ggplot2)
+## load model package
+if(!require(saezero)) devtools::install_github("XiaodanLyu/saezero")
+library(saezero)
+## load pseudo data due to confidentiality
+data(erosion)
+glimpse(erosion)
+```
+
+```{r fig1, fig.width=11, fig.height=4, include=FALSE}
+library("patchwork")
+g1 <- erosion %>% ggplot(aes(x = RUSLE2)) + 
+  geom_histogram(aes(y = ..density..), binwidth = 0.01, 
+                 color = "black", fill = NA, size = rel(1)) + 
+  geom_rug(sides = "b") +
+  xlab("RUSLE2") + theme_bw(base_size = 15) 
+erosion2 <- erosion %>% group_by(cty) %>% 
+  summarise(
+    ybar = mean(log(RUSLE2)[RUSLE2>0]),
+    pbar = mean(RUSLE2>0),
+    count = n()) %>% 
+  filter(!is.na(ybar))
+g2 <- erosion2 %>% ggplot() + 
+  geom_point(aes(x = ybar, y = pbar, size = count), color = "black") +
+  labs(x = "Average of positive RUSLE2s in log scale",
+       y = "Proportion of positive RUSLE2s",
+       size = "Sample size", title = "Counties") +
+  theme_bw(base_size = 15) + ylim(0, 1) +
+  theme(plot.title = element_text(hjust = 0.5), 
+        plot.margin = margin(0, 0, 0, 1, "cm")) 
+g1 + g2 + plot_layout(widths = c(6, 4))
+```
+
+## Table 4
+```{r tb4}
+## data pre-processing
+erosion_2p <- as.2pdata(f_pos = RUSLE2~logR+logK+logS,
+                        f_zero = ~logR+logS+crop2+crop3,
+                        f_area = ~cty, data = erosion)
+## Maximum Likelihood Estimates
+fit <- mleLBH(erosion_2p)
+## fixed effect coefficients and standard errors
+est <- c(beta = fit$fixed$p1[-1], alpha = fit$fixed$p0[-1])
+se <- c(beta = sqrt(diag(fit$vcov$p1)[-1]),
+        alpha = sqrt(diag(fit$vcov$p0)[-1]))
+## positive part
+paste0(round(est[1:3], 2), " (", round(se[1:3], 2), ")")
+## binary part
+paste0(round(est[4:7], 2), " (", round(se[4:7], 2), ")")
+## variance components
+c(sig2lu = fit$refvar1, sig2b = fit$refvar0, 
+  sig2le = fit$errorvar, rho = fit$refcor) %>% 
+  print(digit = 2)
+```
+
+## Figure 2
+```{r fig2, fig.width=12, fig.height=6}
+predictions <- ebLBH(Xaux, f_q = ~cnt, erosion_2p, fit, fullpop = TRUE)
+predictions <- predictions %>% mutate(cv = sqrt(mse)/eb)
+predictions %>% glimpse()
+```
+
+```{r, eval=FALSE}
+## parametric bootstrap estimates of M2
+set.seed(2020)
+b <- 0
+eb_boot.store <- mmse_boot.store <- c()
+repeat{
+  b <- b + 1
+  ys <- simLBH(fit, erosion, f_pos = ~logR+logK+logS,
+               f_zero = ~logR+logS+crop2+crop3, f_area = ~cty)
+  erosion_boot <- erosion %>% mutate(RUSLE2 = ys)
+  erosion_boot_2p <- as.2pdata(f_pos = RUSLE2~logR+logK+logS,
+                               f_zero = ~logR+logS+crop2+crop3,
+                               f_area = ~cty, data = erosion_boot)
+  fit_boot <- mleLBH(erosion_boot_2p)
+  eb_boot <- ebLBH(Xaux, f_q = ~cnt, erosion_boot_2p, fit_boot, fullpop = TRUE)$eb
+  mmse_boot <- ebLBH(Xaux, f_q = ~cnt, erosion_boot_2p, fit, fullpop = TRUE)$eb
+  eb_boot.store <- rbind(eb_boot.store, eb_boot)
+  mmse_boot.store <- rbind(mmse_boot.store, mmse_boot)
+  if(b>=100) break
+}
+m2_boot <- colMeans((eb_boot.store - mmse_boot.store)^2)
+```
+
+```{r, echo=FALSE}
+load("data/eb_mmse_boot.RData")
+```
+
+```{r}
+## pooled standard error of direct estimator
+direct <- erosion %>% group_by(cty) %>% 
+  summarise(nis = n(),
+            pool = sqrt(var(erosion$RUSLE2)/nis)) 
+se_all <- direct %>% mutate(
+  ID = 1:n(),
+  group = cut(nis, c(0, 5, 10, 20, 30)),
+  semiboot = sqrt(predictions$mse+m2_boot),
+  onestep = sqrt(predictions$mse))
+se_long <- se_all %>%
+  tidyr::gather(method, SE, -cty, -nis, -ID, -group) %>% 
+  mutate(method = forcats::fct_recode(
+    method, "Direct" = "pool",
+    "EB (Semi-Boot)" = "semiboot",
+    "EB (One-step)" = "onestep") %>%
+      forcats::fct_relevel("Direct", "EB (One-step)"))
+ggplot(se_long, aes(x = ID, y = SE)) + 
+  geom_line(aes(group = method, color = method, linetype = method)) +
+  scale_linetype_manual(values = c(1,1,0)) +
+  geom_point(aes(shape = method, color = method),
+             size = rel(2), stroke = rel(1)) + 
+  facet_grid(.~group, scales = "free_x") +
+  scale_color_manual(values = c("darkgrey", "black", "black")) +
+  scale_shape_manual(values = c(8, 1, 4)) +
+  labs(x = "County", y = "Standard Error",
+       color = "", shape = "", linetype = "") +
+  # theme_bw(base_size = 18) +
+  theme(legend.position = "bottom", 
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        legend.background = element_rect(colour = "black", size = 0.5)) 
+```
+
+## Figure 3
+```{r fig3, fig.width=12, fig.height=6}
+if(!require(ggmapr)) devtools::install_github("heike/ggmapr")
+## EB predictions and one-step MSE estimates
+map.eb <- map_sd %>% left_join(predictions, by = c("COUNTY" = "area"))
+b <- (0.2-1)/diff(range(map.eb$cv, na.rm = T))
+map.eb.df <- map.eb %>% mutate(s = b*(cv-min(cv, na.rm = T))+1)
+scale_cty <- function(cty) {
+  map.eb.df %>% filter(COUNTY == cty) %>% ggmapr::scale(scale = unique(.$s))
+}
+map.eb.scale <- do.call("rbind", lapply(unique(map.eb.df$COUNTY), scale_cty))
+map.eb.scale %>%
+  ggplot(aes(x = long, y = lat, group = factor(group))) +
+  geom_polygon(aes(fill = eb), colour = NA) +
+  geom_path(data = map_sd) +
+  scale_fill_distiller("", palette = "OrRd", direction = 1) +
+  scale_alpha(trans = "reciprocal", range = c(0.3, 1)) +
+  ggthemes::theme_map(base_size = 18) +
+  theme(legend.position = "right") +
+  coord_equal()
+```
+
+## Figure S3
+
+```{r figs3, fig.width = 12, fig.height = 12}
+cty <- erosion %>% group_by(ctylab = tolower(ctylab)) %>%
+  summarise(nis = n(), qi = mean(RUSLE2==0)) %>% 
+  mutate(sizegroup = cut(nis, c(0, 5, 10, 20, 30)),
+         qigroup = cut(qi, seq(0, 1, 0.25)))
+levels(cty$qigroup) <- c(levels(cty$qigroup), "0")
+levels(cty$sizegroup) <- c(levels(cty$sizegroup), "0")
+cty <- cty %>% mutate(qigroup = replace(qigroup, is.na(qigroup), "0"),
+                      qigroup = relevel(qigroup, "0"))
+cty2 <- left_join(map_sd, cty, by = c("subregion" = "ctylab"))
+cty2 <- cty2 %>% mutate(sizegroup = replace(sizegroup, is.na(sizegroup), "0"),
+                        sizegroup = relevel(sizegroup, "0"))
+p1 <- cty2 %>% ggplot() +
+  geom_polygon(aes(x = long, y = lat, group = factor(group), fill = qigroup), alpha = 0.6) +
+  scale_fill_brewer(name = "", palette = "Greens", direction = -1) +
+  geom_path(aes(x = long, y = lat, group = factor(group))) +
+  coord_equal() + ggthemes::theme_map(base_size = 18) +
+  theme(legend.position = "right")
+p2 <- cty2 %>% ggplot() +
+  geom_polygon(aes(x = long, y = lat, group = factor(group),
+                   fill = sizegroup), alpha = 0.6) +
+  scale_fill_brewer(name = "", palette = "Blues") +
+  geom_path(aes(x = long, y = lat, group = factor(group))) +
+  coord_equal() + ggthemes::theme_map(base_size = 18) +
+  theme(legend.position = "right")
+p1 / p2
+```
