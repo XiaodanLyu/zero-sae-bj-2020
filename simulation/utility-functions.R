@@ -1,5 +1,5 @@
 sim_mc <- function(nsim, true.para, rho = 0.9, link = "logit",
-                   alts = FALSE, bootstrap = FALSE){
+                   alts = FALSE, bootstrap = FALSE, seed){
 
   N <- 10000
   D <- 60
@@ -7,6 +7,8 @@ sim_mc <- function(nsim, true.para, rho = 0.9, link = "logit",
   nis <- rep(nis_uni, times = D/length(nis_uni))
   Nis <- round(N*nis/sum(nis), 0)
   N <- sum(Nis)
+  
+  if(hasArg(seed)) set.seed(seed)
   
   mulx <- 4.45
   sig2lx <- 0.055
