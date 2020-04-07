@@ -1,7 +1,7 @@
 rm(list = ls(all = TRUE))
 ## load packages
-if(!require(saezero)) devtools::intall_github("XiaodanLyu/saezero")
-# library(saezero, lib.loc = "/home/lyux/R/x86_64-pc-linux-gnu-library/")
+# if(!require(saezero)) devtools::intall_github("XiaodanLyu/saezero")
+library(saezero, lib.loc = "/home/lyux/R/x86_64-pc-linux-gnu-library/")
 library(dplyr)
 library(lme4)
 source("simulation/utility-functions.R")
