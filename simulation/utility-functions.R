@@ -159,7 +159,7 @@ pbmseLBH <- function(Xpop, sample_2p, smc, fit, link = "logit", B = 100){
   }
   
   RNGkind("L'Ecuyer-CMRG")
-  boot.store <- do.call("rbind", mclapply(
+  boot.store <- do.call("rbind", parallel::mclapply(
     1:B, boot_one, mc.set.seed = FALSE, mc.cores = 50))
   pop_boot.store <- matrix(boot.store$pop, nr = B, byrow = TRUE)
   eb_boot.store <- matrix(boot.store$eb, nr = B, byrow = TRUE)
