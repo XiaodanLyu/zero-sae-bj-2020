@@ -143,12 +143,9 @@ ebLogNormal <- function(Xaux, f_pos, f_area, data){
   return(yhat)
 }
 
-pbmseLBH <- function(Xpop, sample_2p, smc, fit, link = "logit", B = 1){
+pbmseLBH <- function(Xpop, sample_2p, smc, fit, link = "logit", B = 100){
 
-  b <- 0
-  pop_boot.store <- eb_boot.store <- mmse_boot.store <- m1_boot.store <- c()
-  repeat{
-    b <- b + 1
+  boot_one <- function(b){
     ys <- simLBH(fit, Xpop, f_pos = ~x, f_zero = ~x, f_area = ~area)
     pop_boot <- tapply(ys, Xpop$area, mean)
     sample_boot <- Xpop %>% mutate(y = ys) %>% slice(smc)
@@ -158,12 +155,16 @@ pbmseLBH <- function(Xpop, sample_2p, smc, fit, link = "logit", B = 1){
     eb_boot <- ebLBH(Xpop[-smc], data_2p = sample_boot_2p, fit = fit_boot)$eb
     mmse_boot <- ebLBH(Xpop[-smc], data_2p = sample_boot_2p, fit = fit)$eb
     m1_boot <- ebLBH(Xpop[-smc], data_2p = sample_2p, fit = fit_boot)$mse
-    pop_boot.store <- rbind(pop_boot.store, pop_boot)
-    eb_boot.store <- rbind(eb_boot.store, eb_boot)
-    mmse_boot.store <- rbind(mmse_boot.store, mmse_boot)
-    m1_boot.store <- rbind(m1_boot.store, m1_boot)
-    if (b>=B) break
+    return(data.frame(pop = pop_boot, eb = eb_boot, mmse = mmse_boot, m1 = m1_boot))
   }
+  
+  RNGkind("L'Ecuyer-CMRG")
+  boot.store <- do.call("rbind", mclapply(
+    1:B, boot_one, mc.set.seed = FALSE, mc.cores = 50))
+  pop_boot.store <- matrix(boot.store$pop, nr = B, byrow = TRUE)
+  eb_boot.store <- matrix(boot.store$eb, nr = B, byrow = TRUE)
+  mmse_boot.store <- matrix(boot.store$mmse, nr = B, byrow = TRUE)
+  m1_boot.store <- matrix(boot.store$m1, nr = B, byrow = TRUE)
   EBM2 <- colMeans((eb_boot.store - mmse_boot.store)^2)
   EBMSE <- colMeans((pop_boot.store - eb_boot.store)^2)
   EBM1hat <- colMeans(m1_boot.store)
