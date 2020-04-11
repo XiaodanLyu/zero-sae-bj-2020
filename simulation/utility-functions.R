@@ -97,8 +97,8 @@ sim_mc <- function(nsim, true.para, rho = 0.9, link = "logit",
     if(iter >= nsim){break}
   }
   
-  f.name <- sprintf("simulation/intermediate_results/Cor%s_D%.0f_nsim%.0f_Result.RData",
-                    rho, length(nis), nsim)
+  f.name <- sprintf("simulation/intermediate_results/Cor%s_D%.0f_nsim%.0f_seed%.0f_Result.RData",
+                    rho, length(nis), nsim, seed)
   save(list = c("nis", grep(".store", ls(all = T), value = TRUE)),
        file = f.name, envir = environment())
   
@@ -144,6 +144,35 @@ ebLogNormal <- function(Xaux, f_pos, f_area, data){
 }
 
 pbmseLBH <- function(Xpop, sample_2p, smc, fit, link = "logit", B = 100){
+  
+  b <- 0
+  pop_boot.store <- eb_boot.store <- mmse_boot.store <- m1_boot.store <- c()
+  repeat{
+    b <- b + 1
+    ys <- simLBH(fit, Xpop, f_pos = ~x, f_zero = ~x, f_area = ~area)
+    pop_boot <- tapply(ys, Xpop$area, mean)
+    sample_boot <- Xpop %>% mutate(y = ys) %>% slice(smc)
+    sample_boot_2p <- as.2pdata(f_pos = y~x, f_zero = ~x,
+                                f_area = ~area, data = sample_boot)
+    fit_boot <- mleLBH(sample_boot_2p, link = link)
+    eb_boot <- ebLBH(Xpop[-smc], data_2p = sample_boot_2p, fit = fit_boot)$eb
+    mmse_boot <- ebLBH(Xpop[-smc], data_2p = sample_boot_2p, fit = fit)$eb
+    m1_boot <- ebLBH(Xpop[-smc], data_2p = sample_2p, fit = fit_boot)$mse
+    pop_boot.store <- rbind(pop_boot.store, pop_boot)
+    eb_boot.store <- rbind(eb_boot.store, eb_boot)
+    mmse_boot.store <- rbind(mmse_boot.store, mmse_boot)
+    m1_boot.store <- rbind(m1_boot.store, m1_boot)
+    if (b>=B) break
+  }
+  EBM2 <- colMeans((eb_boot.store - mmse_boot.store)^2)
+  EBMSE <- colMeans((pop_boot.store - eb_boot.store)^2)
+  EBM1hat <- colMeans(m1_boot.store)
+  EBM12 <- colMeans((mmse_boot.store-pop_boot.store)*(eb_boot.store-mmse_boot.store))
+  
+  return(data.frame(EBM2, EBMSE, EBM12, EBM1hat))
+}
+
+pbmseLBH_parallel <- function(Xpop, sample_2p, smc, fit, link = "logit", B = 100){
 
   boot_one <- function(b){
     ys <- simLBH(fit, Xpop, f_pos = ~x, f_zero = ~x, f_area = ~area)
@@ -160,7 +189,7 @@ pbmseLBH <- function(Xpop, sample_2p, smc, fit, link = "logit", B = 100){
   
   RNGkind("L'Ecuyer-CMRG")
   boot.store <- do.call("rbind", parallel::mclapply(
-    1:B, boot_one, mc.cores = 50))
+    1:B, boot_one, mc.cores = 25))
   pop_boot.store <- matrix(boot.store$pop, nr = B, byrow = TRUE)
   eb_boot.store <- matrix(boot.store$eb, nr = B, byrow = TRUE)
   mmse_boot.store <- matrix(boot.store$mmse, nr = B, byrow = TRUE)
