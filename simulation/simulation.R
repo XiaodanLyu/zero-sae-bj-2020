@@ -18,7 +18,16 @@ true.para <- list(beta = c(-13, 2), sig2lu = 0.22, sig2le = 1.23,
 #            mc.cores = 20)
 # )
 
-sim_mc(seed = 2016, nsim = 25, true.para = true.para,
+args=(commandArgs(TRUE))
+if(length(args)==0){
+  print("No arguments supplied.")
+  seed <- 2016
+}else{
+  for(i in 1:length(args)){
+    eval(parse(text=args[[i]]))
+  }
+}
+sim_mc(seed = seed, nsim = 25, true.para = true.para,
        rho = 0.9, link = "logit", alts = FALSE, bootstrap = TRUE)
 
 # rhos <- c(-0.9, -0.6, -0.3, 0, 0.3, 0.6)
