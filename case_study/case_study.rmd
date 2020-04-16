@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE)
 rm(list = ls(all = T))
 library(dplyr)
 library(ggplot2)
+library(patchwork)
 ## load model package
 if(!require(saezero)) devtools::install_github("XiaodanLyu/saezero")
 library(saezero)
@@ -21,8 +22,7 @@ data(erosion)
 glimpse(erosion)
 ```
 
-```{r fig1, fig.width=11, fig.height=4, include=FALSE}
-library("patchwork")
+```{r fig1, fig.width=11, fig.height=4, include=FALSE, eval = FALSE}
 g1 <- erosion %>% ggplot(aes(x = RUSLE2)) + 
   geom_histogram(aes(y = ..density..), binwidth = 0.01, 
                  color = "black", fill = NA, size = rel(1)) + 
