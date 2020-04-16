@@ -10,13 +10,16 @@ source("simulation/utility-functions.R")
 true.para <- list(beta = c(-13, 2), sig2lu = 0.22, sig2le = 1.23,
                   alpha = c(-20, 5), sig2lb = 0.52)
 
-library(parallel)
-RNGkind("L'Ecuyer-CMRG")
-system.time(
-  mclapply(2015+1:20, sim_mc, nsim = 50, true.para = true.para,
-           rho = 0.9, link = "logit", alts = FALSE, bootstrap = TRUE,
-           mc.cores = 20)
-)
+# library(parallel)
+# RNGkind("L'Ecuyer-CMRG")
+# system.time(
+#   mclapply(2015+1:20, sim_mc, nsim = 50, true.para = true.para,
+#            rho = 0.9, link = "logit", alts = FALSE, bootstrap = TRUE,
+#            mc.cores = 20)
+# )
+
+sim_mc(seed = 2016, nsim = 25, true.para = true.para,
+       rho = 0.9, link = "logit", alts = FALSE, bootstrap = TRUE)
 
 # rhos <- c(-0.9, -0.6, -0.3, 0, 0.3, 0.6)
 # system.time(
