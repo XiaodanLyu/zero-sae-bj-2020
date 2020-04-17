@@ -27,7 +27,7 @@ if(length(args)==0){
     eval(parse(text=args[[i]]))
   }
 }
-sim_mc(seed = seed, nsim = 25, true.para = true.para,
+sim_mc(seed = seed, nsim = 1, true.para = true.para,
        rho = 0.9, link = "logit", alts = FALSE, bootstrap = TRUE)
 
 # rhos <- c(-0.9, -0.6, -0.3, 0, 0.3, 0.6)
