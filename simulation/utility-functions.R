@@ -155,9 +155,9 @@ pbmseLBH <- function(Xpop, sample_2p, smc, fit, link = "logit", B = 100){
     sample_boot_2p <- as.2pdata(f_pos = y~x, f_zero = ~x,
                                 f_area = ~area, data = sample_boot)
     fit_boot <- mleLBH(sample_boot_2p, link = link)
-    eb_boot <- ebLBH(Xpop[-smc], data_2p = sample_boot_2p, fit = fit_boot)$eb
-    mmse_boot <- ebLBH(Xpop[-smc], data_2p = sample_boot_2p, fit = fit)$eb
-    m1_boot <- ebLBH(Xpop[-smc], data_2p = sample_2p, fit = fit_boot)$mse
+    eb_boot <- ebLBH(Xpop[-smc,], data_2p = sample_boot_2p, fit = fit_boot)$eb
+    mmse_boot <- ebLBH(Xpop[-smc,], data_2p = sample_boot_2p, fit = fit)$eb
+    m1_boot <- ebLBH(Xpop[-smc,], data_2p = sample_2p, fit = fit_boot)$mse
     pop_boot.store <- rbind(pop_boot.store, pop_boot)
     eb_boot.store <- rbind(eb_boot.store, eb_boot)
     mmse_boot.store <- rbind(mmse_boot.store, mmse_boot)
