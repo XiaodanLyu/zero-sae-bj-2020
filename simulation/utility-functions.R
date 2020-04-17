@@ -86,7 +86,7 @@ sim_mc <- function(nsim, true.para, rho = 0.9, link = "logit",
     
     ## bootstrap terms ####
     if(bootstrap){
-      boot.res <- pbmseLBH(Xs, srsmc_2p, smc, fitmc, link)
+      boot.res <- pbmseLBH_parallel(Xs, srsmc_2p, smc, fitmc, link)
       M2boot.store <- rbind(M2boot.store, boot.res$EBM2)
       MSEboot.store <- rbind(MSEboot.store, boot.res$EBMSE)
       M1biasboot.store <- rbind(M1biasboot.store, boot.res$EBM1hat - ebpred$mse)
@@ -181,9 +181,9 @@ pbmseLBH_parallel <- function(Xpop, sample_2p, smc, fit, link = "logit", B = 100
     sample_boot_2p <- as.2pdata(f_pos = y~x, f_zero = ~x,
                                 f_area = ~area, data = sample_boot)
     fit_boot <- mleLBH(sample_boot_2p, link = link)
-    eb_boot <- ebLBH(Xpop[-smc], data_2p = sample_boot_2p, fit = fit_boot)$eb
-    mmse_boot <- ebLBH(Xpop[-smc], data_2p = sample_boot_2p, fit = fit)$eb
-    m1_boot <- ebLBH(Xpop[-smc], data_2p = sample_2p, fit = fit_boot)$mse
+    eb_boot <- ebLBH(Xpop[-smc,], data_2p = sample_boot_2p, fit = fit_boot)$eb
+    mmse_boot <- ebLBH(Xpop[-smc,], data_2p = sample_boot_2p, fit = fit)$eb
+    m1_boot <- ebLBH(Xpop[-smc,], data_2p = sample_2p, fit = fit_boot)$mse
     return(data.frame(pop = pop_boot, eb = eb_boot, mmse = mmse_boot, m1 = m1_boot))
   }
   
