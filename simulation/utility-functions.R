@@ -1,3 +1,4 @@
+## main function for running simulation ####
 sim_mc <- function(nsim, true.para, rho = 0.9, link = "logit",
                    alts = FALSE, bootstrap = FALSE, seed){
 
@@ -105,6 +106,7 @@ sim_mc <- function(nsim, true.para, rho = 0.9, link = "logit",
   return(NULL)
 }
 
+## EB predictor for a unit-level lognormal model (Berg and Chandra, 2014)  
 ebLogNormal <- function(Xaux, f_pos, f_area, data){
   
   area <- data[, all.vars(f_area)]
@@ -143,6 +145,38 @@ ebLogNormal <- function(Xaux, f_pos, f_area, data){
   return(yhat)
 }
 
+## parametric bootstrap MSE terms w/ parallel computing
+pbmseLBH_parallel <- function(Xpop, sample_2p, smc, fit, link = "logit", B = 100){
+  
+  boot_one <- function(b){
+    ys <- simLBH(fit, Xpop, f_pos = ~x, f_zero = ~x, f_area = ~area)
+    pop_boot <- tapply(ys, Xpop$area, mean)
+    sample_boot <- Xpop %>% mutate(y = ys) %>% slice(smc)
+    sample_boot_2p <- as.2pdata(f_pos = y~x, f_zero = ~x,
+                                f_area = ~area, data = sample_boot)
+    fit_boot <- mleLBH(sample_boot_2p, link = link)
+    eb_boot <- ebLBH(Xpop[-smc,], data_2p = sample_boot_2p, fit = fit_boot)$eb
+    mmse_boot <- ebLBH(Xpop[-smc,], data_2p = sample_boot_2p, fit = fit)$eb
+    m1_boot <- ebLBH(Xpop[-smc,], data_2p = sample_2p, fit = fit_boot)$mse
+    return(data.frame(pop = pop_boot, eb = eb_boot, mmse = mmse_boot, m1 = m1_boot))
+  }
+  
+  RNGkind("L'Ecuyer-CMRG")
+  boot.store <- do.call("rbind", parallel::mclapply(
+    1:B, boot_one, mc.cores = 25))
+  pop_boot.store <- matrix(boot.store$pop, nr = B, byrow = TRUE)
+  eb_boot.store <- matrix(boot.store$eb, nr = B, byrow = TRUE)
+  mmse_boot.store <- matrix(boot.store$mmse, nr = B, byrow = TRUE)
+  m1_boot.store <- matrix(boot.store$m1, nr = B, byrow = TRUE)
+  EBM2 <- colMeans((eb_boot.store - mmse_boot.store)^2)
+  EBMSE <- colMeans((pop_boot.store - eb_boot.store)^2)
+  EBM1hat <- colMeans(m1_boot.store)
+  EBM12 <- colMeans((mmse_boot.store-pop_boot.store)*(eb_boot.store-mmse_boot.store))
+  
+  return(data.frame(EBM2, EBMSE, EBM12, EBM1hat))
+}
+
+## parametric bootstrap MSE terms w/o parallel computing
 pbmseLBH <- function(Xpop, sample_2p, smc, fit, link = "logit", B = 100){
   
   b <- 0
@@ -164,36 +198,6 @@ pbmseLBH <- function(Xpop, sample_2p, smc, fit, link = "logit", B = 100){
     m1_boot.store <- rbind(m1_boot.store, m1_boot)
     if (b>=B) break
   }
-  EBM2 <- colMeans((eb_boot.store - mmse_boot.store)^2)
-  EBMSE <- colMeans((pop_boot.store - eb_boot.store)^2)
-  EBM1hat <- colMeans(m1_boot.store)
-  EBM12 <- colMeans((mmse_boot.store-pop_boot.store)*(eb_boot.store-mmse_boot.store))
-  
-  return(data.frame(EBM2, EBMSE, EBM12, EBM1hat))
-}
-
-pbmseLBH_parallel <- function(Xpop, sample_2p, smc, fit, link = "logit", B = 100){
-
-  boot_one <- function(b){
-    ys <- simLBH(fit, Xpop, f_pos = ~x, f_zero = ~x, f_area = ~area)
-    pop_boot <- tapply(ys, Xpop$area, mean)
-    sample_boot <- Xpop %>% mutate(y = ys) %>% slice(smc)
-    sample_boot_2p <- as.2pdata(f_pos = y~x, f_zero = ~x,
-                                f_area = ~area, data = sample_boot)
-    fit_boot <- mleLBH(sample_boot_2p, link = link)
-    eb_boot <- ebLBH(Xpop[-smc,], data_2p = sample_boot_2p, fit = fit_boot)$eb
-    mmse_boot <- ebLBH(Xpop[-smc,], data_2p = sample_boot_2p, fit = fit)$eb
-    m1_boot <- ebLBH(Xpop[-smc,], data_2p = sample_2p, fit = fit_boot)$mse
-    return(data.frame(pop = pop_boot, eb = eb_boot, mmse = mmse_boot, m1 = m1_boot))
-  }
-  
-  RNGkind("L'Ecuyer-CMRG")
-  boot.store <- do.call("rbind", parallel::mclapply(
-    1:B, boot_one, mc.cores = 25))
-  pop_boot.store <- matrix(boot.store$pop, nr = B, byrow = TRUE)
-  eb_boot.store <- matrix(boot.store$eb, nr = B, byrow = TRUE)
-  mmse_boot.store <- matrix(boot.store$mmse, nr = B, byrow = TRUE)
-  m1_boot.store <- matrix(boot.store$m1, nr = B, byrow = TRUE)
   EBM2 <- colMeans((eb_boot.store - mmse_boot.store)^2)
   EBMSE <- colMeans((pop_boot.store - eb_boot.store)^2)
   EBM1hat <- colMeans(m1_boot.store)
