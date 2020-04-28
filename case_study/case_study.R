@@ -170,7 +170,7 @@ save(loglike_lambda, lend, rend, file = "data/link_analysis.RData")
 
 ## ---- linklambda
 load("data/link_analysis.RData")
-sprintf("(%.2f, %.2f)", lend$root, rend$root)
+sprintf("(%.3f, %.3f)", lend$root, rend$root)
 
 ## ---- figs3
 cty <- erosion %>% group_by(ctylab = tolower(ctylab)) %>%
