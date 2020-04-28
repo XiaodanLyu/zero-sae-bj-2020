@@ -37,34 +37,41 @@ for (seed in 2015:2019){
 }
 
 ## tables and figures ####
+setwd("simulation")
 ## ---- tb1
 load("intermediate_results/Cor0.9_D60_nsim1000_seed2020_Result.RData")
 mcmse.eb <- colMeans((pred.eb.store-YbarNis.store)^2)
-rdmse.alt <- function(pred.store){
-  mcmse <- colMeans((pred.store-YbarNis.store)^2)
-  tapply(mcmse/mcmse.eb-1, nis, mean)
+dmse.alt <- function(pred.store){
+  mcmse <- apply((pred.store-YbarNis.store)^2, 1, tapply, nis, mean)
+  dmse <- mcmse-mcmse.eb
+  diff <- rowMeans(dmse)*1e+5
+  err <- 1.96*sqrt(apply(dmse, 1, var)/1000)*1e+5
+  paste0(sprintf("%.2f", diff), " (", sprintf("%.2f", err), ")")
 }
-rdmse.result <- do.call(
+dmse.result <- do.call(
   "cbind",
   lapply(list(eb0 = pred.eb0.store,
               pi = pred.pi.store,
               zi = pred.zi.store,
               si = pred.si.store),
-         rdmse.alt)) 
-round(rdmse.result, 3)
+         dmse.alt)) 
+dmse.result
 
 ## ---- tb2
-rdmse.store <- c()
+dmse.store <- c()
 rhos <- c(-0.9, -0.6, -0.3, 0, 0.3, 0.6, 0.9)
 for (rho in rhos){
   load(sprintf("intermediate_results/Cor%s_D60_nsim1000_seed2020_Result.RData", rho))
-  mcmse.eb <- colMeans((pred.eb.store-YbarNis.store)^2)
-  mcmse.eb0 <- colMeans((pred.eb0.store-YbarNis.store)^2)
-  rdmse <- mcmse.eb0/mcmse.eb-1
-  rdmse.store <- cbind(rdmse.store, tapply(rdmse, nis, mean))
+  mcmse.eb <- apply((pred.eb.store-YbarNis.store)^2, 1, tapply, nis, mean)
+  mcmse.eb0 <- apply((pred.eb0.store-YbarNis.store)^2, 1, tapply, nis, mean)
+  dmse <- mcmse.eb0-mcmse.eb
+  diff <- rowMeans(dmse)*1e+5
+  err <- 1.96*sqrt(apply(dmse, 1, var)/1000)*1e+5
+  # rej <- ifelse(diff>err, TRUE, FALSE)
+  dmse.store <- cbind(dmse.store, paste0(sprintf("%.2f", diff), " (", sprintf("%.2f", err), ")"))
 }
-colnames(rdmse.store) <- rhos
-round(rdmse.store, 3)
+colnames(dmse.store) <- rhos
+dmse.store
 
 ## ---- tb3
 seeds <- 2015:2019
@@ -82,16 +89,20 @@ for (seed in seeds){
 }
 mcmse <- colMeans((predeb - ybar)^2)
 evalmse <- function(estmse){
+  bmse <- apply(estmse, 1, function(x) tapply(x-mcmse, nis, mean))
+  cp <- apply(abs(predeb - ybar) <= 1.96*sqrt(estmse), 1, tapply, nis, mean)
+  bmse.val <- rowMeans(bmse)*1e+5
+  bmse.err <- 1.96*sqrt(apply(bmse, 1, var)/1000)*1e+5
+  cp.val <- rowMeans(cp)*100
+  cp.err <- 1.96*sqrt(apply(cp, 1, var)/1000)*100
   data.frame(
-    rbmse = colMeans(estmse)/mcmse-1,
-    cp = colMeans(abs(predeb - ybar) <= 1.96*sqrt(estmse)))
+    bmse = paste0(sprintf("%.2f", bmse.val), " (", sprintf("%.2f", bmse.err), ")"),
+    cp = paste0(sprintf("%.2f", cp.val), " (", sprintf("%.2f", cp.err), ")"))
 }
 output <- do.call("cbind", lapply(list(
   onestep = onestep, boot = mseboot, semiboot = onestep + m2boot),
   evalmse)) 
-output <- apply(output, 2, tapply, nis, mean)
-rownames(output) <- unique(nis)
-round(output, 3)
+output
 
 ## ---- tbs2
 bootres <- do.call("cbind", lapply(
