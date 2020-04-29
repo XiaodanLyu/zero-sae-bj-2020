@@ -40,10 +40,12 @@ for (seed in 2015:2019){
 setwd("simulation")
 ## ---- tb1
 load("intermediate_results/Cor0.9_D60_nsim1000_seed2020_Result.RData")
-mcmse.eb <- colMeans((pred.eb.store-YbarNis.store)^2)
+mcmse.eb <- tapply(colMeans((pred.eb.store-YbarNis.store)^2), nis, mean)
+## MC MSE of the proposed EB predictor
+sprintf("%.2f", mcmse.eb*10^5)
 dmse.alt <- function(pred.store){
   mcmse <- apply((pred.store-YbarNis.store)^2, 1, tapply, nis, mean)
-  dmse <- mcmse-mcmse.eb
+  dmse <- mcmse-as.vector(mcmse.eb)
   diff <- rowMeans(dmse)*1e+5
   err <- 1.96*sqrt(apply(dmse, 1, var)/1000)*1e+5
   paste0(sprintf("%.2f", diff), " (", sprintf("%.2f", err), ")")
@@ -117,35 +119,45 @@ library(patchwork)
 ebeb0.store <- c()
 for (rho in rhos){
   load(sprintf("intermediate_results/Cor%s_D60_nsim1000_seed2020_Result.RData", rho))
-  mcmse.eb <- colMeans((pred.eb.store-YbarNis.store)^2)
-  mcmse.eb0 <- colMeans((pred.eb0.store-YbarNis.store)^2)
-  rbmse <- colMeans(mse.eb.store)/mcmse.eb-1
-  rbmse0 <- colMeans(mse.eb0.store)/mcmse.eb0-1
-  cp <- colMeans(abs(pred.eb.store - YbarNis.store) <= 1.96*sqrt(mse.eb.store))
-  cp0 <- colMeans(abs(pred.eb0.store - YbarNis.store) <= 1.96*sqrt(mse.eb0.store))
-  ebeb0.store <- rbind(ebeb0.store, cbind(rho = rho, nis, rbmse, rbmse0, cp, cp0))
+  mcmse.eb <- tapply(colMeans((pred.eb.store-YbarNis.store)^2), nis, mean)
+  mcmse.eb0 <- tapply(colMeans((pred.eb0.store-YbarNis.store)^2), nis, mean)
+  bmse <- apply(mse.eb.store, 1, tapply, nis, mean) - as.vector(mcmse.eb)
+  bmse0 <- apply(mse.eb0.store, 1, tapply, nis, mean) - as.vector(mcmse.eb0)
+  cp <- apply(abs(pred.eb.store - YbarNis.store) <= 1.96*sqrt(mse.eb.store), 1, tapply, nis, mean)
+  cp0 <- apply(abs(pred.eb0.store - YbarNis.store) <= 1.96*sqrt(mse.eb0.store), 1, tapply, nis, mean)
+  res <- cbind(nis = unique(nis), rho = rho, 
+               val_bmse = rowMeans(bmse), val_bmse0 = rowMeans(bmse0),
+               err_bmse = 1.96*sqrt(apply(bmse, 1, var)/1000),
+               err_bmse0 = 1.96*sqrt(apply(bmse0, 1, var)/1000),
+               val_cp = rowMeans(cp), val_cp0 = rowMeans(cp0),
+               err_cp = 1.96*sqrt(apply(cp, 1, var)/1000),
+               err_cp0 = 1.96*sqrt(apply(cp0, 1, var)/1000))
+  ebeb0.store <- rbind(ebeb0.store, res)
 }
 tb <- ebeb0.store %>% as_tibble() %>% 
-  tidyr::gather(metric, value, rbmse:cp0) %>% 
-  group_by(rho, nis, metric) %>% summarise(value = mean(value)) %>% 
-  ungroup() %>% mutate(nis = forcats::fct_relevel(factor(nis), "5")) 
-g1 <- tb %>% filter(grepl("rbmse", metric)) %>%
-  rename(RBMSE = value) %>% 
-  ggplot(aes(x = rho, y = RBMSE, color = metric)) + 
+  mutate(nis = forcats::fct_relevel(factor(nis), "5")) %>% 
+  mutate_at(vars(val_bmse:err_bmse0), vars(.*1e+5)) %>% 
+  mutate_at(vars(val_cp:err_cp0), vars(.*100)) %>% 
+  tidyr::pivot_longer(val_bmse:err_cp0, names_to = c(".value", "metric"), names_pattern = "(.*)_(.*)") 
+g1 <- tb %>% filter(grepl("bmse", metric)) %>%
+  rename(Bias = val) %>% 
+  ggplot(aes(x = rho, y = Bias, color = metric)) + 
   geom_point(aes(shape = metric), size = rel(2)) + geom_line() +
+  geom_ribbon(aes(ymin = Bias - err, ymax = Bias + err, fill = metric), alpha = 0.5) + 
   geom_hline(yintercept = 0, linetype = "dashed") +
   scale_y_continuous(labels = function(x) sprintf("%.2f", x)) +
   scale_x_continuous(breaks = rhos) + 
-  guides(color = FALSE, shape = FALSE) +
+  guides(color = FALSE, shape = FALSE, fill = FALSE) +
   theme_bw(base_size = 15) +
   facet_grid(~nis)
 g2 <- tb %>% filter(grepl("cp", metric)) %>% 
-  rename(CP = value) %>% 
+  rename(CP = val) %>% 
   mutate(metric = recode_factor(metric, "cp" = "EB", "cp0" = "EB0")) %>% 
   ggplot(aes(x = rho, y = CP, color = metric)) + 
   geom_point(aes(shape = metric), size = rel(2)) + geom_line() +
-  geom_hline(yintercept = 0.95, linetype = "dashed") +
+  geom_ribbon(aes(ymin = CP - err, ymax = CP + err, fill = metric), alpha = 0.5) + 
+  geom_hline(yintercept = 95, linetype = "dashed") +
   scale_x_continuous(breaks = rhos) + 
-  theme_bw(base_size = 15) + labs(color = "", shape = "") + 
+  theme_bw(base_size = 15) + labs(color = "", shape = "", fill = "") + 
   facet_grid(~nis) + theme(legend.position = "bottom") 
 g1 / g2
