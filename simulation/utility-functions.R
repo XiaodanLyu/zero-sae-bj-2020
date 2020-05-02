@@ -20,7 +20,7 @@ sim_mc <- function(nsim, true.para, rho = 0.9, link = "logit",
   fit <- list(fixed = list(p1 = true.para$beta, p0 = true.para$alpha),
               errorvar = true.para$sig2le, refvar1 = true.para$sig2lu,
               refvar0 = true.para$sig2lb, refcor = rho)
-  
+
   iter <- 0
   ## true area means
   YbarNis.store <- c()
