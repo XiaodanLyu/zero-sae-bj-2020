@@ -11,14 +11,15 @@ true.para <- list(beta = c(-13, 2), sig2lu = 0.22, sig2le = 1.23,
 
 ## compare with alternative predictors ####
 ## takes about 3~3.5 hours
-system.time(
-  sim_mc(nsim = 1000, true.para = true.para, rho = 0.9, link = "logit",
-         alts = TRUE, bootstrap = FALSE, seed = 2020)
-)
+# system.time(
+#   sim_mc(nsim = 1000, true.para = true.para, rho = 0.9, link = "logit",
+#          alts = TRUE, bootstrap = FALSE, seed = 2020)
+# )
 
 ## compare with EB(0) predictor as rho changes ####
 rhos <- c(-0.9, -0.6, -0.3, 0, 0.3, 0.6)
 ## each takes about 3~3.5 hours
+library(parallel)
 system.time(
   mclapply(rhos, sim_mc, nsim = 1000, true.para = true.para,
            link = "logit", alts = FALSE, bootstrap = FALSE,
