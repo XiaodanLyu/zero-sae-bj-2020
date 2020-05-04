@@ -56,8 +56,31 @@ c(sig2lu = fit$refvar1, sig2b = fit$refvar0,
 (2*(1-pnorm(abs(est[1:3]/se[1:3])))) %>% round(3)
 ### binary part
 (2*(1-pnorm(abs(est[4:7]/se[4:7])))) %>% round(3)
-## 95% confidence interval of rho
-round(fit$cirefcor(alpha = 0.05), 2)
+
+## ---- boot_rho
+## parametric bootstrap
+system.time({
+  set.seed(2020)
+  rho.store <- sapply(1:1000, function(b){
+    ys <- simLBH(fit, erosion, f_pos = ~logR+logK+logS,
+                 f_zero = ~logR+logS+crop2+crop3, f_area = ~cty)
+    erosion_boot <- erosion %>% mutate(RUSLE2 = ys)
+    erosion_boot_2p <- as.2pdata(f_pos = RUSLE2~logR+logK+logS,
+                                 f_zero = ~logR+logS+crop2+crop3,
+                                 f_area = ~cty, data = erosion_boot)
+    fit_boot <- mleLBH(erosion_boot_2p)
+    fit_boot$refcor
+  })
+})
+save(rho.store, file = "data/rho_boot.RData")
+
+## ---- ci_rho
+load("data/rho_boot.RData")
+## 90% confidence interval of rho
+## delta method
+round(fit$cirefcor(alpha = 0.10), 2)
+## parametric bootstrap method
+round(quantile(rho.store, c(0.05, 0.95)), 2)
 
 ## ---- shapirotest
 ## standardized marginal residuals
@@ -94,9 +117,10 @@ repeat{
   if(b>=100) break
 }
 m2_boot <- colMeans((eb_boot.store - mmse_boot.store)^2)
+save(eb_boot.store, mmse_boot.store, m2_boot, file = "data/eb_boot.RData")
 
 ## ---- fig2
-load("data/eb_mmse_boot.RData")
+load("data/eb_boot.RData")
 ## pooled standard error of direct estimator
 direct <- erosion %>% group_by(cty) %>% 
   summarise(nis = n(),
@@ -124,6 +148,7 @@ ggplot(se_long, aes(x = ID, y = SE)) +
   scale_shape_manual(values = c(8, 1, 4)) +
   labs(x = "County", y = "Standard Error",
        color = "", shape = "", linetype = "") +
+  theme_bw(base_size = 18) +
   theme(legend.position = "bottom", 
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),

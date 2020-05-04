@@ -21,6 +21,13 @@ knitr::read_chunk('case_study.R')
 ```{r tb4}
 ```
 
+## 90% confidence interval of $\rho$
+```{r boot_rho, eval=FALSE}
+```
+
+```{r ci_rho}
+```
+
 ## Shapiro-Wilk test of normality
 ```{r shapirotest}
 ```
