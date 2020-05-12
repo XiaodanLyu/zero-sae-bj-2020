@@ -26,10 +26,8 @@ sim_mc <- function(nsim, true.para, rho = 0.9, link = "logit",
   YbarNis.store <- c()
   ## EB and One-step MSE estimator
   pred.eb.store <- mse.eb.store <- c()
-  ## EB(0) estimator
-  pred.eb0.store <- mse.eb0.store <- c()
-  ## alternate methods: plug-in, zero-ignored MMSE, shifted MMSE
-  pred.pi.store <- pred.zi.store <- pred.si.store <- c()
+  ## alternate methods: EB(0), plug-in, zero-ignored MMSE, shifted MMSE
+  pred.eb0.store <- pred.pi.store <- pred.zi.store <- pred.si.store <- c()
   ## bootstrap terms
   M2boot.store <- MSEboot.store <- c()
   M1biasboot.store <- M12boot.store <- c()
@@ -59,7 +57,6 @@ sim_mc <- function(nsim, true.para, rho = 0.9, link = "logit",
     attr(fit0mc, "link") <- link
     eb0pred <- ebLBH(Xaux = Xoosmc, data_2p = srsmc_2p, fit = fit0mc)
     pred.eb0.store <- rbind(pred.eb0.store, eb0pred$eb)
-    mse.eb0.store <- rbind(mse.eb0.store, eb0pred$mse)
     
     ## alternate methods ####
     if(alts){
