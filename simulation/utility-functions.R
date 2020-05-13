@@ -95,8 +95,8 @@ sim_mc <- function(nsim, true.para, rho = 0.9, link = "logit",
     if(iter >= nsim){break}
   }
   
-  f.name <- sprintf("simulation/intermediate_results/Cor%s_D%.0f_nsim%.0f_seed%.0f_Result.RData",
-                    rho, length(nis), nsim, seed)
+  f.name <- sprintf("simulation/intermediate_results/%sCor%s_D%.0f_nsim%.0f_seed%.0f_Result.RData",
+                    ifelse(bootstrap, "bootstrap/", ""), rho, length(nis), nsim, seed)
   save(list = c("nis", grep(".store", ls(all = T), value = TRUE)),
        file = f.name, envir = environment())
   

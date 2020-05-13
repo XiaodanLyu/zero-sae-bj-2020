@@ -33,8 +33,3 @@ rm(list = ls(all = T))
 
 ```{r tbs2}
 ```
-
-## Figure S2
-
-```{r figs2, fig.width=10, fig.height=8}
-```
