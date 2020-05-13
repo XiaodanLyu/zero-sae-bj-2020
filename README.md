@@ -1,5 +1,5 @@
 ---
-title: Code for Empirical Bayes Small Area Estimation Under a Zero-inflated Lognormal Model with correlated random area effects
+title: Code for empirical Bayes small area prediction under a zero-inflated lognormal model with correlated random area effects
 author: Xiaodan Lyu, Emily Berg, Heike Hofmann
 output:
   pdf_document: default
@@ -8,12 +8,12 @@ output:
 
 # R package "saezero"
 
-An R package called "saezero" has been developed for implementing the methodologies introduced in the paper, which includes the following functions
+An R package called "saezero" has been developed for implementing the methodologies introduced in the paper. The package includes the following functions:
 
-- `as.2pdata`: convert a data frame to a list made for fitting the two-part model proposed in the paper;
-- `mleEBH`: obtain maximum likelihood estimates under our model assumption;
-- `ebLBH`: obtain Empirical Bayes small area predictor and associated one-step MSE estimator;
-- `simLBH`: simulate responses under our model assumption.
+- `as.2pdata`: convert a data frame to a list customized for model fitting;
+- `mleEBH`: obtain maximum likelihood estimates;
+- `ebLBH`: obtain empirical Bayes small area predictor and associated one-step MSE estimator;
+- `simLBH`: simulate responses given true model parameters and covariates.
 
 The packages is available and maintained at [https://github.com/XiaodanLyu/saezero](https://github.com/XiaodanLyu/saezero).
 
@@ -38,16 +38,16 @@ This folder contains R code for running both the simulation and the case study. 
 
 ## Simulation
 
-The file `utility-functions.R` contains helper functions for the simulation. The file `simulation.R` is the main function to be executed and results in the output data files in the folder `intermediate_results`. The file `simluation_results.Rmd` contains the output and the R code for reproducing the tables and images related to the simulation section (Section 4 in the paper) and results in `simulation_results.pdf`.
+The file `utility-functions.R` contains helper functions for the simulation. The file `simulation.R` is the main function to be executed and outputs the `Rdata` files in the subfolder `intermediate_results` and the tables in the simulation section (Section 3) of the paper. The file `simluation_results.Rmd` produces `simulation_results.pdf` by putting together the R code and the outputs.
 
 ## Case study
 
 Our R package "saezero" provides two data sets:
 
 - `Xaux`: the auxiliary information for predicting cropland RUSLE2;
-- `erosion`: the simulated data that mimics the real data and produces similar results.
+- `erosion`: the simulated data that mimics the real soil erosion data.
 
-For detailed description of the two data sets, please refer to the package [reference manual](https://github.com/XiaodanLyu/saezero/blob/master/saezero.pdf) or run `?saezero::erosion` and `?saezero::Xaux` in R. The way we produced the data is given in the Section 4.1 of our paper. The file `case_study.rmd` combines the output and the R code (`case_study.R`) for reproducing the tables and images related to the data analysis section (Section 4 in the paper) and results in `case_study.pdf`. The folder `data` contains an intermediate data file `eb_mmse_boot.RData` that contains the parametric bootstrap results of the soil erosion data.
+For detailed description of the two data sets, please refer to the package [reference manual](https://github.com/XiaodanLyu/saezero/blob/master/saezero.pdf) or run `?saezero::erosion` and `?saezero::Xaux` in R. The way we obtained the auxiliary information is given in the Section 4.1 of the paper. We cannot disclose the real CEAP soil erosion data. The files in this folder are intended to use the simulated data `erosion` and the real auxiliary information `Xaux` to reproduce similar tables and figures related to the CEAP data analysis (Section 4 of the paper). The file `case_study.rmd` produces `case_study.pdf` by combining the R code (`case_study.R`) and the outputs. The subfolder `data` contains some intermediate data files that would take relative long computing time to produce.
 
 # Author information
 
@@ -56,6 +56,7 @@ Xiaodan Lyu is mainly responsible for writing the R code of this paper. Readers 
 # Computing Platform
 
 For the parametric bootstrap part, 25 cores were used to speed up the computing process. The results shall be reproducible on a high performance computer using the same random seed and 25 cores. All the simulation code was run under the following configuration:
+
 ```
 R version 3.5.0 (2018-04-23)
 Platform: x86_64-pc-linux-gnu (64-bit)
