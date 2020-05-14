@@ -1,5 +1,5 @@
 ---
-title: "Data analysis of soil erosion data"
+title: "Data analysis of simulated soil erosion data"
 author: "Xiaodan Lyu, Emily Berg and Heike Hofmann"
 date: "`r Sys.Date()`"
 output: pdf_document
@@ -21,11 +21,10 @@ knitr::read_chunk('case_study.R')
 ```{r tb4}
 ```
 
-## 90% confidence interval of $\rho$
-```{r boot_rho, eval=FALSE}
+```{r boot_theta, eval=FALSE}
 ```
 
-```{r ci_rho}
+```{r ci_theta}
 ```
 
 ## Shapiro-Wilk test of normality
@@ -53,20 +52,20 @@ knitr::read_chunk('case_study.R')
 ```{r linklambda}
 ```
 
+## Figure S2
+```{r figs2, fig.width = 12, fig.height = 12}
+```
+
 ## Figure S3
-```{r figs3, fig.width = 12, fig.height = 12}
+```{r figs3, fig.width = 12, fig.height = 8}
 ```
 
 ## Figure S4
-```{r figs4, fig.width = 12, fig.height = 8}
+```{r figs4, fig.width = 8, fig.height = 4}
 ```
 
 ## Figure S5
-```{r figs5, fig.width = 8, fig.height = 4}
-```
-
-## Figure S6
-```{r figs6, fig.width = 8, fig.height = 10}
+```{r figs5, fig.width = 8, fig.height = 10}
 ```
 
 ## System Configurations

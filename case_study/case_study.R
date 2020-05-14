@@ -39,48 +39,42 @@ erosion_2p <- as.2pdata(f_pos = RUSLE2~logR+logK+logS,
                         f_area = ~cty, data = erosion)
 ## Maximum Likelihood Estimates
 fit <- mleLBH(erosion_2p)
-## fixed effect coefficients and standard errors
+
+## ---- boot_theta
+## parametric bootstrap
+## 2-3 hrs
+system.time({
+  set.seed(2015)
+  est.store <- do.call(
+    "rbind.data.frame",
+    lapply(1:500, function(b){
+      ys <- simLBH(fit, erosion, f_pos = ~logR+logK+logS,
+                   f_zero = ~logR+logS+crop2+crop3, f_area = ~cty)
+      erosion_boot <- erosion %>% mutate(RUSLE2 = ys)
+      erosion_boot_2p <- as.2pdata(f_pos = RUSLE2~logR+logK+logS,
+                                   f_zero = ~logR+logS+crop2+crop3,
+                                   f_area = ~cty, data = erosion_boot)
+      fit_boot <- mleLBH(erosion_boot_2p)
+      c(unlist(fit_boot$fixed), fit_boot$refcor)
+    }))
+})
+colnames(est.store) <- c(paste0("beta", 0:3), paste0("alpha", 0:4), "rho")
+save(est.store, file = "data/theta_boot.RData")
+
+## ---- ci_theta
+load("data/theta_boot.RData")
+## fixed effect coefficients and bootstrap standard errors
 est <- c(beta = fit$fixed$p1[-1], alpha = fit$fixed$p0[-1])
-se <- c(beta = sqrt(diag(fit$vcov$p1)[-1]),
-        alpha = sqrt(diag(fit$vcov$p0)[-1]))
-### positive part
-paste0(round(est[1:3], 2), " (", round(se[1:3], 2), ")")
-### binary part
-paste0(round(est[4:7], 2), " (", round(se[4:7], 2), ")")
+se <- apply(t(est.store[,c(2:4, 6:9)]) - est, 1, sd)
+coef <- sprintf("%.2f (%.2f)", est, se)
+names(coef) <- names(est)
+coef
 ## variance components
 c(sig2lu = fit$refvar1, sig2b = fit$refvar0, 
   sig2le = fit$errorvar, rho = fit$refcor) %>% 
   print(digit = 2)
-## p-value of testing fixed effect coefficients
-### positive part
-(2*(1-pnorm(abs(est[1:3]/se[1:3])))) %>% round(3)
-### binary part
-(2*(1-pnorm(abs(est[4:7]/se[4:7])))) %>% round(3)
-
-## ---- boot_rho
-## parametric bootstrap
-system.time({
-  set.seed(2020)
-  rho.store <- sapply(1:1000, function(b){
-    ys <- simLBH(fit, erosion, f_pos = ~logR+logK+logS,
-                 f_zero = ~logR+logS+crop2+crop3, f_area = ~cty)
-    erosion_boot <- erosion %>% mutate(RUSLE2 = ys)
-    erosion_boot_2p <- as.2pdata(f_pos = RUSLE2~logR+logK+logS,
-                                 f_zero = ~logR+logS+crop2+crop3,
-                                 f_area = ~cty, data = erosion_boot)
-    fit_boot <- mleLBH(erosion_boot_2p)
-    fit_boot$refcor
-  })
-})
-save(rho.store, file = "data/rho_boot.RData")
-
-## ---- ci_rho
-load("data/rho_boot.RData")
-## 90% confidence interval of rho
-## delta method
-round(fit$cirefcor(alpha = 0.10), 2)
-## parametric bootstrap method
-round(quantile(rho.store, c(0.05, 0.95)), 2)
+## 95% confidence interval of rho
+round(quantile(est.store[,10], c(0.025, 0.975)), 2)
 
 ## ---- shapirotest
 ## standardized marginal residuals
@@ -101,7 +95,7 @@ set.seed(2020)
 b <- 0
 eb_boot.store <- mmse_boot.store <- c()
 ## take several hours
-repeat{
+system.time(repeat{
   b <- b + 1
   ys <- simLBH(fit, erosion, f_pos = ~logR+logK+logS,
                f_zero = ~logR+logS+crop2+crop3, f_area = ~cty)
@@ -115,7 +109,7 @@ repeat{
   eb_boot.store <- rbind(eb_boot.store, eb_boot)
   mmse_boot.store <- rbind(mmse_boot.store, mmse_boot)
   if(b>=100) break
-}
+})
 m2_boot <- colMeans((eb_boot.store - mmse_boot.store)^2)
 save(eb_boot.store, mmse_boot.store, m2_boot, file = "data/eb_boot.RData")
 
@@ -197,7 +191,7 @@ save(loglike_lambda, lend, rend, file = "data/link_analysis.RData")
 load("data/link_analysis.RData")
 sprintf("(%.3f, %.3f)", lend$root, rend$root)
 
-## ---- figs3
+## ---- figs2
 cty <- erosion %>% group_by(ctylab = tolower(ctylab)) %>%
   summarise(nis = n(), qi = mean(RUSLE2==0)) %>% 
   mutate(sizegroup = cut(nis, c(0, 5, 10, 20, 30)),
@@ -222,7 +216,7 @@ p2 <- cty2 %>% ggplot() +
   ggthemes::theme_map(base_size = 18) &
   theme(legend.position = "right")
 
-## ---- figs4
+## ---- figs3
 fitted.mar <- erosion_2p$lys - na.omit(fit$residuals$mar)
 fitted.con <- erosion_2p$lys - na.omit(fit$residuals$con)
 ggplot(data.frame(r = stderr.mar)) + stat_qq(aes(sample = r)) +
@@ -241,7 +235,7 @@ ggplot(data.frame(x = fitted.con, y = stderr.con)) +
   geom_hline(yintercept = 0) -> g4
 (g1 | g2) / (g3 | g4) & theme_bw(base_size = 18)
 
-## ---- figs5
+## ---- figs4
 ## Hosmer-Lemeshow Goodness of Fit Test
 library(ResourceSelection)
 etahat <- erosion_2p$Xs0 %*% fit$fixed$p0 + 
@@ -255,7 +249,7 @@ ggplot(data.frame(x = 5:15, y = pvalues), aes(x, y)) +
   labs(x = "number of groups", y = "p-value") +
   theme_bw(base_size = 18)
 
-## ---- figs6
+## ---- figs5
 est_all <- direct %>% mutate(eb = predictions$eb) %>% 
   group_by(group) %>% mutate(cor = cor(ctymean, eb))
 ggplot(est_all, aes(x = ctymean, y = eb)) + 
