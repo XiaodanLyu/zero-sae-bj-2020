@@ -44,7 +44,7 @@ fit <- mleLBH(erosion_2p)
 ## parametric bootstrap
 ## 2-3 hrs
 system.time({
-  set.seed(2015)
+  set.seed(2020)
   est.store <- do.call(
     "rbind.data.frame",
     lapply(1:500, function(b){
