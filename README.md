@@ -47,7 +47,7 @@ Our R package "saezero" provides two data sets:
 - `Xaux`: the auxiliary information for predicting cropland RUSLE2;
 - `erosion`: the simulated data that mimics the real soil erosion data.
 
-For detailed description of the two data sets, please refer to the package [reference manual](https://github.com/XiaodanLyu/saezero/blob/master/saezero.pdf) or run `?saezero::erosion` and `?saezero::Xaux` in R. The way we obtained the auxiliary information is given in the Section 4.1 of the paper. We cannot disclose the real CEAP soil erosion data. The files in this folder are intended to use the simulated data `erosion` and the real auxiliary information `Xaux` to reproduce similar tables and figures related to the CEAP data analysis (Section 4 of the paper). The file `case_study.rmd` produces `case_study.pdf` by combining the R code (`case_study.R`) and the outputs. The subfolder `data` contains some intermediate data files that would take relative long computing time to produce.
+For detailed description of the two data sets, please refer to the package [reference manual](https://github.com/XiaodanLyu/saezero/blob/master/saezero.pdf) or run `?saezero::erosion` and `?saezero::Xaux` in R. The way we obtained the auxiliary information is given in the Section 4.1 of the paper. We cannot disclose the real CEAP soil erosion data. The files in this folder are intended to use the simulated data `erosion` and the real auxiliary information `Xaux` to reproduce similar tables and figures related to the CEAP data analysis (Section 4 of the paper). The file `case_study.rmd` produces `case_study.pdf` by combining the R code (`case_study.R`) and the outputs. The subfolder `data` contains some intermediate data files that would take a relatively long computing time to produce.
 
 # Author information
 
@@ -63,7 +63,9 @@ Platform: x86_64-pc-linux-gnu (64-bit)
 Running under: Red Hat Enterprise Linux
 
 Matrix products: default
-BLAS/LAPACK: /opt/rit/spack-app/linux-rhel7-x86_64/gcc-4.8.5/openblas-0.3.3-vbnrrlvu244vbbzbjg45z4zudqv6sor3/lib/libopenblas_haswell-r0.3.3.so
+BLAS/LAPACK: /opt/rit/spack-app/linux-rhel7-x86_64/gcc-4.8.5/
+             openblas-0.3.3-vbnrrlvu244vbbzbjg45z4zudqv6sor3/
+             lib/libopenblas_haswell-r0.3.3.so
 
 locale:
  [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
