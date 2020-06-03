@@ -169,7 +169,8 @@ map.eb.scale %>%
   theme(legend.position = "right") +
   coord_equal()
 
-## ---- link
+## ---- profile_likelihood
+## positive: Box-Cox
 lambdas <- seq(-0.5, 0.5, by = 0.01)
 profile_lam <- function(lambda){
   mleLBH(as.2pdata(f_pos = RUSLE2~logR+logK+logS,
@@ -179,17 +180,42 @@ profile_lam <- function(lambda){
 }
 ## 30-40 minutes
 system.time(loglike_lambda <- sapply(lambdas, profile_lam))
-plot(x = lambdas, y = exp(loglike_lambda-max(loglike_lambda)), type = "l")
-abline(h = exp(-0.5*qchisq(0.95, 1)), col = "red", lty = "dashed")
 (lambdahat <- lambdas[which.max(loglike_lambda)])
 ## 2-3 minutes each
-rend <- uniroot(function(lambda) exp(profile_lam(lambda)-max(loglike_lambda))-exp(-0.5*qchisq(0.95, 1)), c(lambdahat, 0.2))
-lend <- uniroot(function(lambda) exp(profile_lam(lambda)-max(loglike_lambda))-exp(-0.5*qchisq(0.95, 1)), c(-0.2, lambdahat))
-save(loglike_lambda, lend, rend, file = "data/link_analysis.RData")
+rend <- uniroot(function(lambda) 
+  exp(profile_lam(lambda)-max(loglike_lambda))-exp(-0.5*qchisq(0.95, 1)), c(lambdahat, 0.2))
+lend <- uniroot(function(lambda) 
+  exp(profile_lam(lambda)-max(loglike_lambda))-exp(-0.5*qchisq(0.95, 1)), c(-0.2, lambdahat))
+## binary: Aranda-Ordaz
+phis <- 0:50/12.5
+profile_phi <- function(phi){
+  mleLBH(as.2pdata(f_pos = RUSLE2~logR+logK+logS,
+                   f_zero = ~logR+logS+crop2+crop3,
+                   f_area = ~cty, data = erosion),
+         link = glmx::ao2(phi))$loglik
+}
+system.time(loglike_phis <- sapply(phis, function(phi) try(profile_phi(phi))))
+(phihat <- phis[which.max(loglike_phis)])
+rend_phi <- uniroot(function(phi) 
+  exp(profile_phi(phi)-max(loglike_phis))-exp(-0.5*qchisq(0.95, 1)), c(1, 2))
+## save results
+save(lambdas, loglike_lambda, lend, rend, phis, loglike_phis, rend_phi, 
+     file = "data/link_analysis.RData")
 
-## ---- linklambda
+## ---- link_pos
 load("data/link_analysis.RData")
+## positive part transformation family
+plot(x = lambdas, y = exp(loglike_lambda-max(loglike_lambda)), 
+     type = "l", ylab = "normed profile likelihood")
+abline(h = exp(-0.5*qchisq(0.95, 1)), col = "red", lty = "dashed")
 sprintf("(%.3f, %.3f)", lend$root, rend$root)
+
+## ---- link_binary
+## binary part transformation family
+plot(x = phis, y = exp(loglike_phis-max(loglike_phis)),
+     type = "l", ylab = "normed profile likelihood")
+abline(h = exp(-0.5*qchisq(0.95, 1)), col = "red", lty = "dashed")
+sprintf("%.3f", rend_phi$root)
 
 ## ---- figs2
 cty <- erosion %>% group_by(ctylab = tolower(ctylab)) %>%

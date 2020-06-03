@@ -46,10 +46,14 @@ knitr::read_chunk('case_study.R')
 ```
 
 ## Appendix B. Link Function Analysis
-```{r link, eval = FALSE}
+```{r profile_likelihood, eval = FALSE}
 ```
 
-```{r linklambda}
+```{r link_pos}
+```
+
+Remark: The following profile liklihood function of $\phi$ in the Aranda-Ordaz transformation family in the binary part is obtained using the simulated erosion data as contained in the R package `saezero`. (We admit the profile likelihood in the following figure may not be normed by the globally maximized likelihood.) The same R code gives a MLE of $\hat\phi = 0$ and a 95\% confidence interval containing $\phi=1$ (the logit link) using the real erosion data. We suspect this discrepancy is due to sampling randomness in the process of simulating erosion data. The profile likehood function based on another simulated erosion data (not shown here) is close to what we obtained using the real erosion data.
+```{r link_binary}
 ```
 
 ## Figure S2
