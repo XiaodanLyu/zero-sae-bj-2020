@@ -6,6 +6,8 @@ output:
   html_document: default
 ---
 
+[![DOI:10.1002/bimj.202000029](https://zenodo.org/badge/DOI/10.1002/bimj.202000029.svg)](https://onlinelibrary.wiley.com/doi/abs/10.1002/bimj.202000029)
+
 # R package "saezero"
 
 An R package called "saezero" has been developed for implementing the methodologies introduced in the paper. The package includes the following functions:
